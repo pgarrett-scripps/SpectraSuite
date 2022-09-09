@@ -8,6 +8,6 @@ jobs:
     - name: Publish to Registry
       uses: elgohr/Publish-Docker-Github-Action@v4
       with:
-        name: ${{ DOCKER_HUB_REPOSITORY }}
+        name: ${{ secrets.DOCKER_HUB_REPOSITORY }}
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
