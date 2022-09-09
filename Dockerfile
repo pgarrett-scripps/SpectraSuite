@@ -1,20 +1,10 @@
-FROM ubuntu:20.04
+FROM python:3
 
-run DEBIAN_FRONTEND=noninteractive
+WORKDIR /usr/src/app
 
-RUN apt-get update
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN apt-get update && apt-get install -y \
-    python3.4 \
-    python3-pip \
-    git
+COPY . .
 
-ADD requirements.txt .
-
-RUN python3 --version
-
-RUN pip3 install -r requirements.txt
-
-ADD . .
-
-CMD streamlit run ./home.py --server.maxUploadSize 5000
+CMD streamlit run ./home.py --server.maxUploadSize 2000
