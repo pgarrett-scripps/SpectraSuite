@@ -4,11 +4,11 @@ from util import get_lines_from_uploaded_file
 
 ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
 fragments = st.text_input("Fragment Ions (comma separated)")
-fragments = list(map(float, fragments.strip().split(",")))
-max_frag = max(fragments)
 ppm = st.number_input("Fragment Ion match PPM", 50)
-print(fragments)
+
 if st.button("Run"):
+    fragments = list(map(float, fragments.strip().split(",")))
+    max_frag = max(fragments)
     ms2_lines = get_lines_from_uploaded_file(ms2_file)
 
     fragment_indexes = []
