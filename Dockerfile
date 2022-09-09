@@ -17,4 +17,4 @@ RUN pip3 install -r requirements.txt
 
 ADD . .
 
-CMD streamlit run ./main.py --server.maxUploadSize 5000
+CMD streamlit run ./home.py --server.maxUploadSize 5000
