@@ -2,6 +2,9 @@ import streamlit as st
 
 from util import get_lines_from_uploaded_file
 
+st.title("Remove Fragment Ions")
+
+
 ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
 fragments = st.text_input("Fragment Ions (comma separated)")
 ppm = st.number_input("Fragment Ion match PPM", 50)
