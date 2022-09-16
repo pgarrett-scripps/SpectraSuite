@@ -12,6 +12,20 @@ from util import get_lines_from_uploaded_file
 
 st.title('Fragment Ion Explorer')
 
+with st.expander("Help"):
+    st.markdown("""
+    
+        **Figure Bars:**
+    
+        **frequency** - is the frequency that a fragment ion is found in spectra
+        (0.0 means it never occurs while 1.0 means it occurs in every spectra)
+
+        **intensity** - the intensity of the fragment ion relative to the max peak in each spectra
+        
+        **Note:** it is possible to have a frquency and intensity > 1.0. This occurs when there are multile ions
+        close to the fragment ion mass.
+        """)
+
 ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
 
 BIN_RESOLUTION = 10_000
@@ -72,7 +86,6 @@ if ms2_file and st.button("Run"):
         bins, indexes = zip(*sorted(zip(bins, list(range(BIN_RESOLUTION))), reverse=True))
         return indexes
 
-
     cnt_bin_indexes = sort_bins(cnt_bins)[:PLOT_FILTER_N]
     int_bin_indexes = sort_bins(int_bins)[:PLOT_FILTER_N]
 
@@ -83,7 +96,7 @@ if ms2_file and st.button("Run"):
 
     df = pd.DataFrame(data={'bin_index': all_indexes, 'count': list(map(int,top_n_cnt_bins)), 'intensity':top_n_int_bins})
     df['frequency'] = df['count']/num_spectra
-    df['normalized_frequency'] = df['intensity']/num_spectra
+    df['intensity'] = df['intensity']/df['count']
     mz_bounds = list(map(get_value_from_bin, df['bin_index']))
     df['mz_lower'] = [mz_bound[0] for mz_bound in mz_bounds]
     df['mz_upper'] = [mz_bound[1] for mz_bound in mz_bounds]
@@ -116,7 +129,7 @@ if ms2_file and st.button("Run"):
     df = df.sort_values(by=['mean_mz'])
     st.dataframe(df)
 
-    fig = px.bar(df, x=[round(x,4) for x in df["mean_mz"]], y=['frequency', 'normalized_frequency'],barmode='group')
+    fig = px.bar(df, x=[round(x,4) for x in df["mean_mz"]], y=['frequency', 'intensity'],barmode='group')
 
     fig.update_xaxes(type='category')
     st.plotly_chart(fig, use_container_width=True)

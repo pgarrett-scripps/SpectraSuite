@@ -16,11 +16,14 @@ with st.expander("Help"):
     
     The app matches the ms2 file name (without extension) to the file name in the DTASelect-filter file.
     
-    169.ms2 -> 169
+    (ms2 file name) 169.ms2 -> 169
     
-    (DTASelect-filter.txt line) * ***169***.36947.36947.2 [...]   --> 169 == 169
+    (ms2 file name) 169a.ms2 -> 169a
+
     
-    (DTASelect-filter.txt line) * ***169a***.36947.36947.2 [...]   --> 169a != 169
+    (DTASelect-filter.txt line) * ***169***.36947.36947.2 [...]   --> 169
+    
+    (DTASelect-filter.txt line) * ***169a***.36947.36947.2 [...]   --> 169a
     
     """)
 
