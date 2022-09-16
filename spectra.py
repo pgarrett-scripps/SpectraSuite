@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 import numpy as np
 from typing import List
-import streamlit as st
 
 @dataclass
 class Spectra:
@@ -26,23 +25,37 @@ class Spectra:
                 self.int_spectra, self.mz_spectra = [], []
 
 
-def read_ms2_file(ms2_lines: list[str], min_mz, max_mz, n):
+def read_ms2_file(ms2_lines: list[str], min_mz, max_mz, n, loss=False):
     spectra = None
-    all_mz, all_int, all_charges, all_masses = [], [], [], []
+    all_mz, all_int, all_charges, all_masses, all_spec = [], [], [], [], []
 
+    current_spec = 0
     for line in ms2_lines:
         if not line:
             continue
         if line.startswith("H"):
             continue
         elif line.startswith("S"):
+            current_spec += 1
+
+            prec_mz = float(line.rstrip().split('\t')[3])
+
             if spectra != None:
-                spectra.filter_mz(min_mz, max_mz)
+                if loss:
+                    spectra.filter_mz(prec_mz-max_mz, prec_mz-min_mz)
+                else:
+                    spectra.filter_mz(min_mz, max_mz)
+
                 spectra.normalize_intensity()
                 spectra.sort_by_intensity()
 
-                all_mz.extend(spectra.mz_spectra[:n])
+                if loss:
+                    all_mz.extend([prec_mz - mz for mz in spectra.mz_spectra[:n]])
+                else:
+                    all_mz.extend(spectra.mz_spectra[:n])
+
                 all_int.extend(spectra.int_spectra[:n])
+                all_spec.extend([current_spec]*len(spectra.int_spectra[:n]))
 
             spectra = Spectra()
         elif line.startswith("I"):
@@ -57,5 +70,5 @@ def read_ms2_file(ms2_lines: list[str], min_mz, max_mz, n):
             spectra.mz_spectra.append(mz)
             spectra.int_spectra.append(intensity)
 
-    return all_mz, all_int, all_charges, all_masses
+    return all_mz, all_int, all_charges, all_masses, all_spec
 
