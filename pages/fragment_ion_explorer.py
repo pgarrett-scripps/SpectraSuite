@@ -23,9 +23,12 @@ min_fragment_mz = st.number_input("Min fragment ion m/z", min_value=0, max_value
                                   help='min fragment mz (ions less than this are excluded from analysis')
 max_fragment_mz = st.number_input("Max fragment ion m/z", min_value=0, max_value=10_000, value=500,
                                   help='max fragment mz (ions greater than this are excluded from anlysis)')
-fragment_ppm_tolerance = st.number_input('fragment ppm', min_value=0, max_value=10_000, value=50)
+fragment_ppm_tolerance = st.number_input('fragment ppm', min_value=0, max_value=10_000, value=50,
+                                         help='mz ppm (parts per million) tolerance to match ions between spectra')
 use_loss_fragments = st.checkbox("Use loss fragments", value=False,
-                                 help='visualize loss fragments. All fragment ions are subtracted from the precursor ion mz value')
+                                 help='Analyze the fragment ion loss spectra. All fragment ions are subtracted from the'
+                                      ' precursor ions mz and analysis proceeds as normal. With this checked'
+                                      'min/max mz are in reference to the min/max of the loss fragments.')
 if ms2_file and st.button("Run"):
     ms2_lines = get_lines_from_uploaded_file(ms2_file)
     mzs, ints, charges, masses, specs = read_ms2_file(ms2_lines, min_fragment_mz, max_fragment_mz,
