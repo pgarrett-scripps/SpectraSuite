@@ -6,8 +6,12 @@ st.title("Remove Fragment Ions")
 
 
 ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
-fragments = st.text_input("Fragment Ions (comma separated)")
-ppm = st.number_input("Fragment Ion match PPM", 50)
+fragments = st.text_input("Fragment Ions (comma separated)",
+                          help='comma separated list of fragments to remove from ms2 file. '
+                               'this can be copied from the ion explorer page.')
+ppm = st.number_input("Fragment Ion match PPM", 50,
+                      help='The mass ppm (parts per million) tolerance to match ions between the '
+                           'ms2 file and input fragments')
 
 if st.button("Run"):
     fragments = list(map(float, fragments.strip().split(",")))

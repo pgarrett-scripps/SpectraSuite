@@ -15,50 +15,62 @@ st.title('Fragment Ion Explorer')
 ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
 
 BIN_RESOLUTION = 10_000
-SPECTRA_FILTER_N = st.number_input("Consider top N most intense peaks per spectra", min_value=0, max_value=1000, value=20)
-PLOT_FILTER_N = st.number_input("Plot Top N peaks", min_value=0, max_value=1000, value=20)
-MIN_MZ = st.number_input("Min MZ", min_value=0, max_value=10_000, value=100)
-MAX_MZ = st.number_input("Max MZ", min_value=0, max_value=10_000, value=500)
-PPM = st.number_input('PPM', min_value=0, max_value=10_000, value=50)
-LOSS = st.checkbox("Loss", value=False)
+specta_peak_count_filter = st.number_input("Number of peaks to use per spectra", min_value=0, max_value=1000, value=20,
+                        help='Max number of peaks to look at per spectra (sorted by highest -> lowest intensity)')
+analysis_fragment_ion_count = st.number_input("Number of fragments to analyze", min_value=0, max_value=1000, value=20,
+                        help='The number of fragment ions to plot/view (sorted by highest-> lowest frequency')
+min_fragment_mz = st.number_input("Min fragment ion m/z", min_value=0, max_value=10_000, value=100,
+                                  help='min fragment mz (ions less than this are excluded from analysis')
+max_fragment_mz = st.number_input("Max fragment ion m/z", min_value=0, max_value=10_000, value=500,
+                                  help='max fragment mz (ions greater than this are excluded from anlysis)')
+fragment_ppm_tolerance = st.number_input('fragment ppm', min_value=0, max_value=10_000, value=50)
+use_loss_fragments = st.checkbox("Use loss fragments", value=False,
+                                 help='visualize loss fragments. All fragment ions are subtracted from the precursor ion mz value')
 if ms2_file and st.button("Run"):
     ms2_lines = get_lines_from_uploaded_file(ms2_file)
-    all_mz, all_ints, all_charges, all_masses, all_spec = read_ms2_file(ms2_lines, MIN_MZ, MAX_MZ, SPECTRA_FILTER_N,
-                                                                        loss=LOSS)
-    all_mz, all_ints, all_spec = np.array(all_mz, dtype='float32'), np.array(all_ints, dtype='float32'), np.array(
-        all_spec, dtype='int32')
-    num_spectra = len(set(all_spec))
+    mzs, ints, charges, masses, specs = read_ms2_file(ms2_lines, min_fragment_mz, max_fragment_mz,
+                                                      specta_peak_count_filter,
+                                                      loss=use_loss_fragments)
+    mzs, ints, specs = np.array(mzs, dtype='float32'), np.array(ints, dtype='float32'), np.array(
+        specs, dtype='int32')
+    num_spectra = len(set(specs))
 
-    sort_indecies = np.argsort(all_mz)
-    all_mz = all_mz[sort_indecies]
-    all_ints = all_ints[sort_indecies]
-    all_spec = all_spec[sort_indecies]
+    sort_indexes = np.argsort(mzs)
+    mzs = mzs[sort_indexes]
+    ints = ints[sort_indexes]
+    specs = specs[sort_indexes]
 
-    NBINS = int(MAX_MZ - MIN_MZ)
-    frequency_hist, frequency_bin_edges = np.histogram(all_mz, bins=NBINS)
-    weighted_frequency_hist, weighted_frequency_bin_edges = np.histogram(all_mz, weights=all_ints, bins=NBINS)
+    nbins = int(max_fragment_mz - min_fragment_mz)
+    frequency_hist, frequency_bin_edges = np.histogram(mzs, bins=nbins)
+    weighted_frequency_hist, weighted_frequency_bin_edges = np.histogram(mzs, weights=ints, bins=nbins)
 
     with st.expander("Histogram"):
-        bar_df = pd.DataFrame(data={'edge':frequency_bin_edges[:-1], 'frequency':frequency_hist, 'weighted_frequency':weighted_frequency_hist})
-        fig = px.bar(bar_df, x='edge', y=['frequency', 'weighted_frequency'], title='Fragment Ion Frequency', barmode='group')
+        bar_df = pd.DataFrame(data={'edge': frequency_bin_edges[:-1],
+                                    'frequency': frequency_hist,
+                                    'weighted_frequency': weighted_frequency_hist})
+        fig = px.bar(bar_df,
+                     x='edge',
+                     y=['frequency', 'weighted_frequency'],
+                     barmode='group')
         st.plotly_chart(fig)
 
     sort_idx = np.argsort(weighted_frequency_hist)[::-1]
 
     data = {'peak': [], 'logprob': []}
-    for idx in sort_idx[:PLOT_FILTER_N]:
+    for idx in sort_idx[:analysis_fragment_ion_count]:
         lower_bin_edge = frequency_bin_edges[idx - 1]
-        upper_bin_edge = frequency_bin_edges[min(idx + 2, len(frequency_bin_edges)-1)]
+        upper_bin_edge = frequency_bin_edges[min(idx + 2, len(frequency_bin_edges) - 1)]
 
-        mz_mask = (upper_bin_edge >= all_mz) & (all_mz >= lower_bin_edge)
-        mz_list = all_mz[mz_mask]
-        int_list = all_ints[mz_mask]
+        mz_mask = (upper_bin_edge >= mzs) & (mzs >= lower_bin_edge)
+        mz_list = mzs[mz_mask]
+        int_list = ints[mz_mask]
 
         if len(mz_list) == 0:
             continue
 
+        # fit kde to -1 -> +1 bins (extract multiple peaks per bin)
         kde = KernelDensity(bandwidth=0.01, kernel='gaussian')
-        kde.fit(mz_list.reshape(-1, 1), frequency_bin_edges[idx+1], 1000)
+        kde.fit(mz_list.reshape(-1, 1), frequency_bin_edges[idx + 1], 1000)
         X = np.linspace(frequency_bin_edges[idx], frequency_bin_edges[idx + 1], 500)
         logprob = np.exp(kde.score_samples(X.reshape(-1, 1)))
         peaks, _ = find_peaks(logprob, height=0)
@@ -68,16 +80,17 @@ if ms2_file and st.button("Run"):
 
     df = pd.DataFrame(data=data)
 
+    # Compute fragment ion stats
     num_samples, frequency, peak_mz_std, peak_mz_median, peak_mz_mean, peak_mz_sem, peak_int_std, peak_int_median, \
     peak_int_mean, peak_int_sem = [], [], [], [], [], [], [], [], [], []
     for _, row in df.iterrows():
         mz = row['peak']
-        mz_offset = mz * PPM / 1_000_000
+        mz_offset = mz * fragment_ppm_tolerance / 1_000_000
         min_mz, max_mz = mz - mz_offset, mz + mz_offset
-        mz_mask = (max_mz >= all_mz) & (all_mz >= min_mz)
-        mz_list = all_mz[mz_mask]
-        int_list = all_ints[mz_mask]
-        spec_list = all_spec[mz_mask]
+        mz_mask = (max_mz >= mzs) & (mzs >= min_mz)
+        mz_list = mzs[mz_mask]
+        int_list = ints[mz_mask]
+        spec_list = specs[mz_mask]
 
         spec_dict = {}
         for mz, i, spec in zip(mz_list, int_list, spec_list):
@@ -113,7 +126,7 @@ if ms2_file and st.button("Run"):
     df['int_mean'] = peak_int_mean
     df['int_sem'] = peak_int_sem
 
-    df = df.sort_values(by='frequency', ascending=False)[:PLOT_FILTER_N]
+    df = df.sort_values(by='frequency', ascending=False)[:analysis_fragment_ion_count]
     df = df.sort_values(by='peak')
 
     with st.expander('Data'):
@@ -135,4 +148,3 @@ if ms2_file and st.button("Run"):
 
     st.subheader("Fragment Ions")
     st.text(','.join(map(str, df['peak'])))
-

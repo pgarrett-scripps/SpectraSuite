@@ -7,25 +7,34 @@ from util import get_lines_from_uploaded_file
 
 st.title("Filter MS2")
 
-ms2_file = st.file_uploader("Ms2 File", type=['ms2'])
-dta_filter_file = st.file_uploader(label="DTASelect-filter.txt", type=".txt")
-
 with st.expander("Help"):
     st.markdown("""
+    This app will filter an ms2 file to only contain spectra which were are found in the
+    DTASelect-filter.txt file. All peptide IDs are loaded from the dta file and
+    the scan numbers are extracted. Next the ms2 file is filtered to contain only scan 
+    numbers found in the dta file. (There may be decoys present in the dta file. This will 
+    cause issues if you have a low number of overall IDs)
+    
+    **NOTE:**
     Ensure that the ms2 file matches the notation used in the DTASelect-filter.txt 
+    (This should work by default in most cases) 
     
-    The app matches the ms2 file name (without extension) to the file name in the DTASelect-filter file.
+    This app matches the ms2 file name (without extension) to the file name in the DTASelect-filter file.
     
-    (ms2 file name) 169.ms2 -> 169
+    (ms2 file name) 169.ms2 -> '169'
     
-    (ms2 file name) 169a.ms2 -> 169a
+    (ms2 file name) 169a.ms2 -> '169a'
 
+    (DTASelect-filter.txt line) * ***169***.36947.36947.2 [...]   --> '169'
     
-    (DTASelect-filter.txt line) * ***169***.36947.36947.2 [...]   --> 169
-    
-    (DTASelect-filter.txt line) * ***169a***.36947.36947.2 [...]   --> 169a
+    (DTASelect-filter.txt line) * ***169a***.36947.36947.2 [...]   --> '169a'
     
     """)
+
+ms2_file = st.file_uploader("Ms2 File", type=['ms2'],
+                            help='MS2 file to analyze')
+dta_filter_file = st.file_uploader(label="DTASelect-filter.txt", type=".txt",
+                                   help='DTASelect-filter.txt file containing filtered IDs')
 
 if st.button("Run"):
     dta_filter_file_name = Path(dta_filter_file.name).stem
